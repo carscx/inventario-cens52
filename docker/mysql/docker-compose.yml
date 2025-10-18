@@ -1,0 +1,19 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: db-inventario-local
+    restart: unless-stopped
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: rootLocal123!
+      MYSQL_DATABASE: inventario_cens52
+      MYSQL_USER: inventario
+      MYSQL_PASSWORD: InventarioLocal123!
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d:ro
