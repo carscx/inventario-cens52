@@ -55,6 +55,7 @@ jobs:
           rsync -az --delete --delete-excluded \
             --exclude-from=rsync-exclude.txt \
             --exclude='.well-known/**' \
+            --exclude='public/.well-known/**' \
             --omit-dir-times --no-times \
             --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
             -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o PasswordAuthentication=no" \
@@ -62,22 +63,18 @@ jobs:
 
       - name: 🧰 Post-deploy (carpetas, permisos, OPcache reset)
         shell: bash
-        env:
-          DEPLOY_PATH: /home/carscx-inventario/htdocs/inventario.carscx.com
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o PasswordAuthentication=no \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'REMOTE'
-          set -euo pipefail
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "set -euo pipefail
+             DEPLOY_PATH='${{ env.DEPLOY_PATH }}'
 
-          # Asegurar carpeta persistente para uploads
-          mkdir -p ${DEPLOY_PATH}/public/uploads/items
+             mkdir -p \"\$DEPLOY_PATH/public/uploads/items\"
 
-          # Permisos típicos
-          find ${DEPLOY_PATH} -type d -exec chmod 755 {} \;
-          find ${DEPLOY_PATH} -type f -exec chmod 644 {} \;
+             find \"\$DEPLOY_PATH\" -type d -exec chmod 755 {} \;
+             find \"\$DEPLOY_PATH\" -type f -exec chmod 644 {} \;
 
-          # Reset OPcache si está habilitado (PHP 8.4)
-          if command -v php >/dev/null 2>&1; then
-            php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo \"OPcache reset\n\"; }"
-          fi
+             if command -v php >/dev/null 2>&1; then
+               php -r 'if (function_exists(\"opcache_reset\")) { opcache_reset(); echo \"OPcache reset\n\"; }'
+             fi"
