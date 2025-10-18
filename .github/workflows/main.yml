@@ -1,0 +1,81 @@
+name: Deploy PHP (rsync) to CloudPanel
+
+on:
+  push:
+    branches: [ "main" ]  # despliega en cada push a main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_PATH: /home/carscx-inventario/htdocs/inventario.carscx.com
+
+    steps:
+      - name: 🛰️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔐 Escribir clave SSH privada
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          cat > ~/.ssh/id_ed25519 <<'KEY'
+          ${{ secrets.SSH_PRIVATE_KEY }}
+          KEY
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: 🗝️ Registrar host conocido
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          ssh-keyscan -T 5 -H ${{ secrets.SSH_HOST }} -p ${{ secrets.SSH_PORT }} >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: 📦 Preparar exclusiones de sincronización
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > rsync-exclude.txt <<'EOF'
+          .git*/
+          .github/
+          docker/
+          README.md
+          .env
+          .env.*
+          public/uploads/
+          public/uploads/**
+          EOF
+
+      - name: 🚀 Deploy (rsync --delete)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -az --delete --delete-excluded \
+            --exclude-from=rsync-exclude.txt \
+            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o PasswordAuthentication=no" \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ env.DEPLOY_PATH }}/
+
+      - name: 🧰 Post-deploy (carpetas, permisos, OPcache reset)
+        shell: bash
+        env:
+          DEPLOY_PATH: /home/carscx-inventario/htdocs/inventario.carscx.com
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o PasswordAuthentication=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<'REMOTE'
+          set -euo pipefail
+
+          # Asegurar carpeta persistente para uploads
+          mkdir -p ${DEPLOY_PATH}/public/uploads/items
+
+          # Permisos típicos
+          find ${DEPLOY_PATH} -type d -exec chmod 755 {} \;
+          find ${DEPLOY_PATH} -type f -exec chmod 644 {} \;
+
+          # Reset OPcache si está habilitado (PHP 8.4)
+          if command -v php >/dev/null 2>&1; then
+            php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo \"OPcache reset\n\"; }"
+          fi
+REMOTE
