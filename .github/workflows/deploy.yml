@@ -2,7 +2,7 @@ name: Deploy PHP (rsync) to CloudPanel
 
 on:
   push:
-    branches: [ "main" ]  # despliega en cada push a main
+    branches: ["main"] # despliega en cada push a main
 
 jobs:
   deploy:
@@ -78,4 +78,3 @@ jobs:
           if command -v php >/dev/null 2>&1; then
             php -r "if (function_exists('opcache_reset')) { opcache_reset(); echo \"OPcache reset\n\"; }"
           fi
-REMOTE
