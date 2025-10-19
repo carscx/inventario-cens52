@@ -48,18 +48,27 @@ jobs:
           public/uploads/**
           EOF
 
-      - name: 🚀 Deploy (rsync --delete)
+      - name: 🧹 Prep remoto (crear carpetas compartidas si faltan)
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o PasswordAuthentication=no \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" '
+              set -euo pipefail
+              mkdir -p /home/carscx-inventario/htdocs/inventario.carscx.com/public/uploads/items
+              mkdir -p /home/carscx-inventario/htdocs/inventario.carscx.com/.well-known/acme-challenge
+            '
+
+      - name: 🚀 Deploy con rsync (protegiendo .env y uploads)
         shell: bash
         run: |
           set -euo pipefail
-          rsync -az --delete --delete-excluded \
-            --exclude-from=rsync-exclude.txt \
-            --exclude='.well-known/**' \
-            --exclude='public/.well-known/**' \
-            --omit-dir-times --no-times \
-            --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
-            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o PasswordAuthentication=no" \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ env.DEPLOY_PATH }}/
+          rsync -az --delete \
+            --exclude=".env" \
+            --exclude=".env.local" \
+            --exclude="public/uploads/" \
+            --exclude=".well-known/" \
+            -e 'ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o PasswordAuthentication=no' \
+            ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/carscx-inventario/htdocs/inventario.carscx.com/"
 
       - name: 🧰 Post-deploy (carpetas, permisos, OPcache reset)
         shell: bash
