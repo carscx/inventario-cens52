@@ -51,7 +51,6 @@ $updatedAt = $item['updated_at'] ?? null;
         <a href="index.php">← Volver</a>
         <a href="editar.php?id=<?= (int)$id ?>">Editar</a>
         <a href="eliminar.php?id=<?= (int)$id ?>">Eliminar</a>
-        <a href="eliminar_definitivo.php?id=<?= (int)$id ?>">Eliminar definitivamente</a>
       </div>
     </header>
 

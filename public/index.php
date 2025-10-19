@@ -124,7 +124,7 @@ $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchA
           <nav class="item-actions">
             <a href="ver.php?id=<?= (int)$it['id'] ?>">Ver</a>
             <a href="editar.php?id=<?= (int)$it['id'] ?>">Editar</a>
-            <a href="eliminar_definitivo.php?id=<?= (int)$it['id'] ?>">Eliminar</a>
+            <a href="eliminar.php?id=<?= (int)$it['id'] ?>">Eliminar</a>
           </nav>
         </div>
 
