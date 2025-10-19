@@ -193,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>Imágenes (múltiples, máx. 10 MB c/u)
           <input type="file" name="imagenes[]" accept="image/*" multiple>
         </label>
-        <p class="muted">Se guardan en <code>/uploads/items/{CODIGO}/</code>. Tipos: JPG, PNG, WEBP, GIF.</p>
+        <p class="muted">Tipos: JPG, PNG, WEBP, GIF.</p>
       </fieldset>
 
       <button type="submit">Guardar</button>
