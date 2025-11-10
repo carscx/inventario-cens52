@@ -84,9 +84,9 @@ $stmt = $pdo->prepare($sql);
 // con los valores para los "parámetros nombrados" (ej. :q, :estado).
 // La base de datos se encarga de escapar estos valores de forma segura.
 $stmt->execute([
-    ':q' => $q,
-    ':estado' => $estado,
-    ':categoria' => $categoria, // Nota: 'categoria' se espera que sea un ID (ej. '5') o ''.
+  ':q' => $q,
+  ':estado' => $estado,
+  ':categoria' => $categoria, // Nota: 'categoria' se espera que sea un ID (ej. '5') o ''.
 ]);
 
 // `fetchAll()` recupera TODAS las filas que coincidieron con la consulta
@@ -115,33 +115,69 @@ $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchA
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <link rel="stylesheet" href="/assets/ui.css">
   <style>
-    .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; }
-    .grid { display: grid; grid-template-columns: 80px 1fr 140px 140px 100px 100px; gap: .75rem; align-items: center; }
-    @media (max-width: 900px) {
-      .grid { grid-template-columns: 80px 1fr 120px; }
-      .hide-sm { display: none; }
+    .thumb {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 6px;
     }
-    .row { padding: .6rem .4rem; border-bottom: 1px solid var(--muted-border-color); }
-    .header { font-weight: 600; position: sticky; top: 0; background: var(--pico-background-color); z-index: 1; }
-    .muted { color: var(--pico-muted-color); font-size: .9em; }
-    .status { text-transform: capitalize; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 80px 1fr 140px 140px 100px 100px;
+      gap: .75rem;
+      align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 80px 1fr 120px;
+      }
+
+      .hide-sm {
+        display: none;
+      }
+    }
+
+    .row {
+      padding: .6rem .4rem;
+      border-bottom: 1px solid var(--muted-border-color);
+    }
+
+    .header {
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      background: var(--pico-background-color);
+      z-index: 1;
+    }
+
+    .muted {
+      color: var(--pico-muted-color);
+      font-size: .9em;
+    }
+
+    .status {
+      text-transform: capitalize;
+    }
   </style>
 </head>
 <body>
   <main class="app-container">
     <header class="page-header">
-  <h2>Inventario <span class="muted">Listado</span></h2>
-  <div class="header-actions">
+      <h2>Inventario <span class="muted">Listado</span></h2>
+      <div class="header-actions">
 
-    <?php
-      if (session_status() === PHP_SESSION_NONE) session_start();
-      if (!empty($_SESSION['auth_ok'])):
-    ?>
-      <a role="button" class="secondary" href="logout.php">Salir (Modo Edición)</a>
-    <?php endif; ?>
-    <a role="button" class="contrast" href="nuevo.php">+ Nuevo ítem</a>
-  </div>
-</header>
+        <?php
+        if (session_status() === PHP_SESSION_NONE)
+          session_start();
+        if (!empty($_SESSION['auth_ok'])):
+          ?>
+          <a role="button" class="secondary" href="logout.php">Salir (Modo Edición)</a>
+        <?php endif; ?>
+        <a role="button" class="contrast" href="nuevo.php">+ Nuevo ítem</a>
+      </div>
+    </header>
 
     <?php if (isset($_GET['msg']) && $_GET['msg'] === 'purged'): ?>
       <div class="notice"><strong>Ítem eliminado definitivamente.</strong></div>
@@ -150,19 +186,20 @@ $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchA
     <?php endif; ?>
 
     <form method="get" class="filters">
-      <input class="wide" type="search" name="q" placeholder="Buscar por código o nombre" value="<?= htmlspecialchars($q) ?>">
+      <input class="wide" type="search" name="q" placeholder="Buscar por código o nombre"
+        value="<?= htmlspecialchars($q) ?>">
       <select name="categoria">
         <option value="">Categoría (todas)</option>
         <?php foreach ($cats as $c): ?>
-          <option value="<?= (int)$c['id'] ?>" <?= $categoria==(string)$c['id']?'selected':''; ?>>
+          <option value="<?= (int) $c['id'] ?>" <?= $categoria == (string) $c['id'] ? 'selected' : ''; ?>>
             <?= htmlspecialchars($c['nombre']) ?>
           </option>
         <?php endforeach; ?>
       </select>
       <select name="estado">
         <option value="">Estado (todos)</option>
-        <?php foreach (['operativo','en_reparacion','baja','stock'] as $opt): ?>
-          <option value="<?= $opt ?>" <?= $estado===$opt?'selected':''; ?>><?= $opt ?></option>
+        <?php foreach (['operativo', 'en_reparacion', 'baja', 'stock'] as $opt): ?>
+          <option value="<?= $opt ?>" <?= $estado === $opt ? 'selected' : ''; ?>><?= $opt ?></option>
         <?php endforeach; ?>
       </select>
       <div class="actions">
@@ -198,20 +235,21 @@ $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchA
           <strong><?= htmlspecialchars($it['nombre']) ?></strong>
           <div class="meta">Código: <?= htmlspecialchars($it['codigo']) ?></div>
           <nav class="item-actions">
-            <a href="ver.php?id=<?= (int)$it['id'] ?>">Ver</a>
+            <a href="ver.php?id=<?= (int) $it['id'] ?>">Ver</a>
             <?php
-      if (session_status() === PHP_SESSION_NONE) session_start();
-      if (!empty($_SESSION['auth_ok'])):
-    ?>
-      <a href="editar.php?id=<?= (int)$it['id'] ?>">Editar</a>
-      <a href="eliminar.php?id=<?= (int)$it['id'] ?>">Eliminar</a>
-    <?php endif; ?>
+            if (session_status() === PHP_SESSION_NONE)
+              session_start();
+            if (!empty($_SESSION['auth_ok'])):
+              ?>
+              <a href="editar.php?id=<?= (int) $it['id'] ?>">Editar</a>
+              <a href="eliminar.php?id=<?= (int) $it['id'] ?>">Eliminar</a>
+            <?php endif; ?>
           </nav>
         </div>
 
         <div class="hide-sm"><?= htmlspecialchars($it['categoria'] ?? '—') ?></div>
         <div class="hide-sm"><?= htmlspecialchars($it['ubicacion'] ?? '—') ?></div>
-        <div class="nowrap"><?= (int)$it['cantidad'] ?></div>
+        <div class="nowrap"><?= (int) $it['cantidad'] ?></div>
         <div class="status nowrap"><?= htmlspecialchars($it['estado']) ?></div>
       </article>
     <?php endforeach; ?>

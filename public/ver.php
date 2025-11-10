@@ -5,6 +5,8 @@ declare(strict_types=1);
 require __DIR__ . '/../app/bootstrap.php';
 
 
+
+
 function h(?string $v): string { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -51,8 +53,14 @@ $updatedAt = $item['updated_at'] ?? null;
       <h2><?= h($item['nombre']) ?></h2>
       <div class="header-actions">
         <a href="index.php">← Volver</a>
-        <a href="editar.php?id=<?= (int)$id ?>">Editar</a>
-        <a href="eliminar.php?id=<?= (int)$id ?>">Eliminar</a>
+        <?php
+      if (session_status() === PHP_SESSION_NONE) session_start();
+      if (!empty($_SESSION['auth_ok'])):
+    ?>
+<a href="editar.php?id=<?= (int)$id ?>">Editar</a>
+<a href="eliminar.php?id=<?= (int)$id ?>">Eliminar</a>
+
+    <?php endif; ?>
       </div>
     </header>
 
