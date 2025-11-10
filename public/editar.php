@@ -9,6 +9,11 @@ declare(strict_types=1);
 // Carga el archivo 'bootstrap.php' (conexión $pdo, etc.).
 require __DIR__ . '/../app/bootstrap.php';
 
+// --- Protección ---
+require __DIR__ . '/../app/auth.php'; // Carga la lógica de sesión y contraseña
+require_auth(); // ¡AQUÍ ESTÁ LA PROTECCIÓN! Si no está logueado, redirige.
+// --- Fin protección ---
+
 // --- 2. Funciones de Ayuda (Helpers) ---
 
 

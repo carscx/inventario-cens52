@@ -9,6 +9,11 @@ declare(strict_types=1);
 // Carga el archivo 'bootstrap.php' (probablemente para la conexión $pdo).
 require __DIR__ . '/../app/bootstrap.php';
 
+// --- Protección ---
+require __DIR__ . '/../app/auth.php'; // Carga la lógica de sesión y contraseña
+require_auth(); // ¡AQUÍ ESTÁ LA PROTECCIÓN! Si no está logueado, redirige.
+// --- Fin protección ---
+
 // Inicia o reanuda una sesión. Esto es **indispensable** para la protección CSRF,
 // ya que el token de seguridad se almacena en la variable $_SESSION.
 session_start();

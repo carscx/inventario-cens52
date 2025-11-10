@@ -130,11 +130,18 @@ $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchA
 <body>
   <main class="app-container">
     <header class="page-header">
-      <h2>Inventario <span class="muted">Listado</span></h2>
-      <div class="header-actions">
-        <a role="button" class="contrast" href="nuevo.php">+ Nuevo ítem</a>
-      </div>
-    </header>
+  <h2>Inventario <span class="muted">Listado</span></h2>
+  <div class="header-actions">
+
+    <?php
+      if (session_status() === PHP_SESSION_NONE) session_start();
+      if (!empty($_SESSION['auth_ok'])):
+    ?>
+      <a role="button" class="secondary" href="logout.php">Salir (Modo Edición)</a>
+    <?php endif; ?>
+    <a role="button" class="contrast" href="nuevo.php">+ Nuevo ítem</a>
+  </div>
+</header>
 
     <?php if (isset($_GET['msg']) && $_GET['msg'] === 'purged'): ?>
       <div class="notice"><strong>Ítem eliminado definitivamente.</strong></div>
