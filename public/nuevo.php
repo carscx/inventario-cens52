@@ -14,6 +14,11 @@ declare(strict_types=1);
 // inicia sesiones (session_start) y define otras configuraciones globales.
 require __DIR__ . '/../app/bootstrap.php';
 
+// --- Protección ---
+require __DIR__ . '/../app/auth.php'; // Carga la lógica de sesión y contraseña
+require_auth(); // ¡AQUÍ ESTÁ LA PROTECCIÓN! Si no está logueado, redirige.
+// --- Fin protección ---
+
 // Inicializa un array vacío para almacenar los mensajes de error de validación.
 // Si este array permanece vacío, significa que los datos son válidos.
 $errors = [];

@@ -34,4 +34,3 @@ function require_auth(): void {
         exit;
     }
 }
-?>

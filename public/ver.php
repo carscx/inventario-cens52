@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 require __DIR__ . '/../app/bootstrap.php';
+
+
 function h(?string $v): string { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;

@@ -199,8 +199,13 @@ $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchA
           <div class="meta">Código: <?= htmlspecialchars($it['codigo']) ?></div>
           <nav class="item-actions">
             <a href="ver.php?id=<?= (int)$it['id'] ?>">Ver</a>
-            <a href="editar.php?id=<?= (int)$it['id'] ?>">Editar</a>
-            <a href="eliminar.php?id=<?= (int)$it['id'] ?>">Eliminar</a>
+            <?php
+      if (session_status() === PHP_SESSION_NONE) session_start();
+      if (!empty($_SESSION['auth_ok'])):
+    ?>
+      <a href="editar.php?id=<?= (int)$it['id'] ?>">Editar</a>
+      <a href="eliminar.php?id=<?= (int)$it['id'] ?>">Eliminar</a>
+    <?php endif; ?>
           </nav>
         </div>
 
