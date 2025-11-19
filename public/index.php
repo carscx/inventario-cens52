@@ -1,109 +1,82 @@
 <?php
-// --- 1. Configuración Inicial ---
-
-// Activa el modo estricto de tipos en PHP (PHP 7+).
+// public/index.php
 declare(strict_types=1);
-
-// Carga el archivo 'bootstrap.php' que inicializa la aplicación
-// (probablemente define $pdo, inicia sesiones, etc.).
 require __DIR__ . '/../app/bootstrap.php';
 
-// --- 2. Recolección de Filtros (desde la URL/GET) ---
+// --- Configuración del Paginado ---
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+if ($page < 1)
+  $page = 1;
+$limit = 10;
+$offset = ($page - 1) * $limit;
 
-// Se recogen los parámetros de la URL (query string, ej. ?q=algo&estado=op).
-// `$_GET['q'] ?? ''` usa el operador de fusión de null (PHP 7+) para
-// asignar un string vacío '' si el parámetro 'q' no existe.
-// `trim()` elimina espacios en blanco al inicio y al final del término de búsqueda.
-$q = trim($_GET['q'] ?? ''); // 'q' es el término de búsqueda (query).
-$estado = $_GET['estado'] ?? ''; // 'estado' es el filtro de estado (ej. 'operativo').
-$categoria = $_GET['categoria'] ?? ''; // 'categoria' es el filtro de ID de categoría.
+// --- Filtros ---
+$q = trim($_GET['q'] ?? '');
+$estado = $_GET['estado'] ?? '';
+$categoria = $_GET['categoria'] ?? '';
+$marca = $_GET['marca'] ?? '';
 
-// --- 3. Construcción de la Consulta SQL ---
+// Config del Header
+$header_title = 'Listado';
+$show_new_button = true;
 
-// `<<<SQL ... SQL;` es la sintaxis HEREDOC. Permite escribir un string
-// multilínea de forma muy legible, ideal para consultas SQL complejas.
-$sql = <<<SQL
-SELECT
-    -- Seleccionamos campos específicos de la tabla 'items' (alias 'i')
-    i.id, i.codigo, i.nombre, i.estado, i.ubicacion, i.cantidad, i.updated_at,
+// --- Consulta Base ---
+$sql_base = "
+FROM items i
+LEFT JOIN categorias c ON c.id = i.categoria_id
+LEFT JOIN marcas m ON m.id = i.marca_id
+WHERE i.deleted_at IS NULL
+  AND (:q = '' OR i.codigo LIKE CONCAT('%', :q, '%') OR i.nombre LIKE CONCAT('%', :q, '%') OR m.nombre LIKE CONCAT('%', :q, '%'))
+  AND (:estado = '' OR i.estado = :estado)
+  AND (:categoria = '' OR c.id = :categoria)
+  AND (:marca = '' OR m.id = :marca)
+";
 
-    -- Seleccionamos el nombre de la categoría de la tabla 'categorias' (alias 'c')
-    -- y le damos el alias 'categoria' al resultado.
-    c.nombre AS categoria,
-
-    -- --- Subconsulta Correlacionada ---
-    -- Esta es una subconsulta que se ejecuta POR CADA fila (ítem 'i')
-    -- que devuelve la consulta principal.
-    (SELECT im.ruta
-     FROM imagenes im
-     WHERE im.item_id = i.id  -- Se correlaciona con el ID del ítem actual.
-     ORDER BY im.posicion ASC, im.id ASC -- Busca la imagen con posición más baja (o ID más bajo si hay empate).
-     LIMIT 1) AS imagen -- Solo queremos una imagen (la "portada").
-FROM
-    items i -- La tabla principal es 'items', con el alias 'i'.
-LEFT JOIN
-    -- Unimos con 'categorias' (alias 'c') usando un LEFT JOIN.
-    -- LEFT JOIN: Muestra el ítem INCLUSO SI no tiene categoría (c.id = i.categoria_id sería NULL).
-    categorias c ON c.id = i.categoria_id
-WHERE
-    -- 1. Filtro para "Soft Deletes" (borrado lógico):
-    -- Solo muestra ítems que NO estén marcados como borrados.
-    i.deleted_at IS NULL
-
-    -- 2. Filtro de Búsqueda (q):
-    -- Este es un truco común para filtros opcionales:
-    -- Si el parámetro :q está vacío (no hay búsqueda), ':q = ''` es TRUE, y esta condición se cumple.
-    -- Si :q NO está vacío, evalúa el LIKE contra 'codigo' O 'nombre'.
-    -- CONCAT('%', :q, '%') crea un string 'busqueda' -> '%busqueda%' (contiene).
-    AND (:q = '' OR i.codigo LIKE CONCAT('%', :q, '%') OR i.nombre LIKE CONCAT('%', :q, '%'))
-
-    -- 3. Filtro de Estado:
-    -- Sigue el mismo patrón: si :estado está vacío, se ignora el filtro.
-    -- Si no, comprueba que i.estado sea igual al parámetro.
-    AND (:estado = '' OR i.estado = :estado)
-
-    -- 4. Filtro de Categoría:
-    -- Mismo patrón. Nota: Compara 'c.id' (de la tabla categorías) con el ID de categoría.
-    AND (:categoria = '' OR c.id = :categoria)
-ORDER BY
-    -- Ordena los resultados:
-    -- 1. Por 'updated_at' (fecha de actualización) en orden descendente (los más nuevos primero).
-    -- 2. 'id' descendente se usa como "desempate" (tie-breaker) si las fechas son idénticas.
-    i.updated_at DESC, i.id DESC
-LIMIT 200 -- Limita la consulta a un máximo de 200 resultados (buena práctica para rendimiento).
-SQL;
-
-// --- 4. Preparación y Ejecución de la Consulta ---
-
-// Prepara la consulta SQL. Esto protege contra Inyección SQL,
-// ya que la estructura de la consulta y los datos se envían al
-// motor de BD por separado.
-$stmt = $pdo->prepare($sql);
-
-// Ejecuta la consulta preparada, pasando un array asociativo
-// con los valores para los "parámetros nombrados" (ej. :q, :estado).
-// La base de datos se encarga de escapar estos valores de forma segura.
-$stmt->execute([
+$params = [
   ':q' => $q,
   ':estado' => $estado,
-  ':categoria' => $categoria, // Nota: 'categoria' se espera que sea un ID (ej. '5') o ''.
-]);
+  ':categoria' => $categoria,
+  ':marca' => $marca
+];
 
-// `fetchAll()` recupera TODAS las filas que coincidieron con la consulta
-// y las devuelve como un array de arrays.
+// 1. Conteo Total
+$count_stmt = $pdo->prepare("SELECT COUNT(i.id) " . $sql_base);
+$count_stmt->execute($params);
+$total_items = (int) $count_stmt->fetchColumn();
+$total_pages = ceil($total_items / $limit);
+
+// 2. Consulta Datos Paginados
+$sql = <<<SQL
+SELECT
+    i.id, i.codigo, i.nombre, i.estado, i.ubicacion, i.cantidad, i.updated_at,
+    i.modelo, i.area_departamento,
+    c.nombre AS categoria,
+    m.nombre AS marca,
+    (SELECT im.ruta FROM imagenes im WHERE im.item_id = i.id ORDER BY im.posicion ASC LIMIT 1) AS imagen
+$sql_base
+ORDER BY i.updated_at DESC, i.id DESC
+LIMIT $limit OFFSET $offset
+SQL;
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $items = $stmt->fetchAll();
 
-// --- 5. Carga de Datos Adicionales (para filtros HTML) ---
-
-// Ejecuta una segunda consulta, mucho más simple.
-// Esta consulta NO está filtrada, trae TODAS las categorías.
-// Se usará en el HTML para construir el <select> (desplegable)
-// de filtro de categorías, para que el usuario pueda elegir.
+// Cargar datos para selects
 $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchAll();
+$marcas = $pdo->query("SELECT id, nombre FROM marcas ORDER BY nombre")->fetchAll();
 
-// Aquí termina el bloque PHP.
-// Las variables $items y $cats (y $q, $estado, $categoria para 'recordar' los filtros)
-// estarán disponibles para ser usadas en el archivo HTML que (se asume) sigue a este bloque.
+function url_con_params(array $nuevosParams): string
+{
+  return '?' . http_build_query(array_merge($_GET, $nuevosParams));
+}
+
+// Helper para Badge
+function render_badge($estado)
+{
+  $label = ucfirst(str_replace('_', ' ', $estado));
+  return "<span class='badge {$estado}'>{$label}</span>";
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -111,110 +84,67 @@ $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchA
   <meta charset="utf-8">
   <title>Inventario - Listado</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Pico.css CDN (sin build) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <link rel="stylesheet" href="/assets/ui.css">
-  <style>
-    .thumb {
-      width: 64px;
-      height: 64px;
-      object-fit: cover;
-      border-radius: 6px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 80px 1fr 140px 140px 100px 100px;
-      gap: .75rem;
-      align-items: center;
-    }
-
-    @media (max-width: 900px) {
-      .grid {
-        grid-template-columns: 80px 1fr 120px;
-      }
-
-      .hide-sm {
-        display: none;
-      }
-    }
-
-    .row {
-      padding: .6rem .4rem;
-      border-bottom: 1px solid var(--muted-border-color);
-    }
-
-    .header {
-      font-weight: 600;
-      position: sticky;
-      top: 0;
-      background: var(--pico-background-color);
-      z-index: 1;
-    }
-
-    .muted {
-      color: var(--pico-muted-color);
-      font-size: .9em;
-    }
-
-    .status {
-      text-transform: capitalize;
-    }
-  </style>
 </head>
 <body>
   <main class="app-container">
-    <header class="page-header">
-      <h2>Inventario <span class="muted">Listado</span></h2>
-      <div class="header-actions">
+    <?php require __DIR__ . '/../app/header.php'; ?>
 
-        <?php
-        if (session_status() === PHP_SESSION_NONE)
-          session_start();
-        if (!empty($_SESSION['auth_ok'])):
-          ?>
-          <a role="button" class="secondary" href="logout.php">Salir (Modo Edición)</a>
-        <?php endif; ?>
-        <a role="button" class="contrast" href="nuevo.php">+ Nuevo ítem</a>
+    <?php if (isset($_GET['msg'])): ?>
+      <div class="notice">
+        <?php if ($_GET['msg'] === 'purged')
+          echo '🗑️ Ítem eliminado definitivamente.'; ?>
+        <?php if ($_GET['msg'] === 'deleted')
+          echo '✅ Ítem eliminado.'; ?>
       </div>
-    </header>
-
-    <?php if (isset($_GET['msg']) && $_GET['msg'] === 'purged'): ?>
-      <div class="notice"><strong>Ítem eliminado definitivamente.</strong></div>
-    <?php elseif (isset($_GET['msg']) && $_GET['msg'] === 'deleted'): ?>
-      <div class="notice"><strong>Ítem eliminado.</strong></div>
     <?php endif; ?>
 
     <form method="get" class="filters">
-      <input class="wide" type="search" name="q" placeholder="Buscar por código o nombre"
-        value="<?= htmlspecialchars($q) ?>">
+      <input class="search-input" type="search" name="q" placeholder="Buscar..." value="<?= htmlspecialchars($q) ?>">
+
       <select name="categoria">
-        <option value="">Categoría (todas)</option>
+        <option value="">Categoría</option>
         <?php foreach ($cats as $c): ?>
           <option value="<?= (int) $c['id'] ?>" <?= $categoria == (string) $c['id'] ? 'selected' : ''; ?>>
             <?= htmlspecialchars($c['nombre']) ?>
           </option>
         <?php endforeach; ?>
       </select>
-      <select name="estado">
-        <option value="">Estado (todos)</option>
-        <?php foreach (['operativo', 'en_reparacion', 'baja', 'stock'] as $opt): ?>
-          <option value="<?= $opt ?>" <?= $estado === $opt ? 'selected' : ''; ?>><?= $opt ?></option>
+
+      <select name="marca">
+        <option value="">Marca</option>
+        <?php foreach ($marcas as $m): ?>
+          <option value="<?= (int) $m['id'] ?>" <?= $marca == (string) $m['id'] ? 'selected' : ''; ?>>
+            <?= htmlspecialchars($m['nombre']) ?>
+          </option>
         <?php endforeach; ?>
       </select>
+
+      <select name="estado">
+        <option value="">Estado</option>
+        <?php foreach (['operativo', 'en_reparacion', 'baja', 'stock'] as $opt): ?>
+          <option value="<?= $opt ?>" <?= $estado === $opt ? 'selected' : ''; ?>>
+            <?= ucfirst(str_replace('_', ' ', $opt)) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+
       <div class="actions">
-        <button type="submit">Filtrar</button>
-        <button type="reset" onclick="location.href='index.php'">Limpiar</button>
+        <button type="submit" class="contrast">Filtrar</button>
+        <?php if ($q || $estado || $categoria || $marca): ?>
+          <a role="button" href="index.php" class="secondary outline">Limpiar</a>
+        <?php endif; ?>
       </div>
     </form>
 
-    <div class="list-header muted">
+    <div class="list-header">
       <div>Imagen</div>
-      <div>Nombre / Código</div>
-      <div class="hide-sm">Categoría</div>
+      <div>Ítem / Código</div>
+      <div class="hide-sm">Marca / Modelo</div>
       <div class="hide-sm">Ubicación</div>
-      <div class="nowrap">Cantidad</div>
-      <div class="nowrap">Estado</div>
+      <div class="nowrap" style="text-align:center">Cant.</div>
+      <div class="nowrap" style="text-align:center">Estado</div>
     </div>
 
     <?php if (!$items): ?>
@@ -223,36 +153,79 @@ $cats = $pdo->query("SELECT id, nombre FROM categorias ORDER BY nombre")->fetchA
 
     <?php foreach ($items as $it): ?>
       <article class="list-row">
+        <!-- 1. Imagen -->
         <div>
           <?php if ($it['imagen']): ?>
             <img class="thumb" src="/uploads/<?= htmlspecialchars($it['imagen']) ?>" alt="thumb">
           <?php else: ?>
-            <div class="thumb" style="display:grid;place-items:center;">—</div>
+            <img class="thumb" src="/assets/no_image.png" alt="Sin img">
           <?php endif; ?>
         </div>
 
+        <!-- 2. Info -->
         <div class="item-main">
           <strong><?= htmlspecialchars($it['nombre']) ?></strong>
-          <div class="meta">Código: <?= htmlspecialchars($it['codigo']) ?></div>
+          <div class="meta">
+            <?= htmlspecialchars($it['codigo']) ?>
+            <span class="hide-sm"> · <?= htmlspecialchars($it['categoria'] ?? '') ?></span>
+          </div>
           <nav class="item-actions">
             <a href="ver.php?id=<?= (int) $it['id'] ?>">Ver</a>
+
             <?php
+            // Verificación de sesión segura
             if (session_status() === PHP_SESSION_NONE)
               session_start();
             if (!empty($_SESSION['auth_ok'])):
               ?>
               <a href="editar.php?id=<?= (int) $it['id'] ?>">Editar</a>
-              <a href="eliminar.php?id=<?= (int) $it['id'] ?>">Eliminar</a>
+              <!-- BOTÓN ELIMINAR AGREGADO -->
+              <a href="eliminar.php?id=<?= (int) $it['id'] ?>" style="color:var(--pico-del-color)">Eliminar</a>
             <?php endif; ?>
           </nav>
         </div>
 
-        <div class="hide-sm"><?= htmlspecialchars($it['categoria'] ?? '—') ?></div>
-        <div class="hide-sm"><?= htmlspecialchars($it['ubicacion'] ?? '—') ?></div>
-        <div class="nowrap"><?= (int) $it['cantidad'] ?></div>
-        <div class="status nowrap"><?= htmlspecialchars($it['estado']) ?></div>
+        <!-- 3. Marca -->
+        <div class="hide-sm">
+          <strong><?= htmlspecialchars($it['marca'] ?? '—') ?></strong><br>
+          <span class="muted"><?= htmlspecialchars($it['modelo'] ?? '') ?></span>
+        </div>
+
+        <!-- 4. Ubicación -->
+        <div class="hide-sm">
+          <?= htmlspecialchars($it['ubicacion'] ?? '—') ?><br>
+          <span class="muted"><?= htmlspecialchars($it['area_departamento'] ?? '') ?></span>
+        </div>
+
+        <!-- 5. Cantidad -->
+        <div class="nowrap" style="text-align:center; font-weight:bold;">
+          <?= (int) $it['cantidad'] ?>
+        </div>
+
+        <!-- 6. Estado (Badge) -->
+        <div>
+          <?= render_badge($it['estado']) ?>
+        </div>
       </article>
     <?php endforeach; ?>
+
+    <!-- Paginación -->
+    <?php if ($total_pages > 1): ?>
+      <div class="pagination">
+        <a role="button" class="secondary outline <?= ($page <= 1) ? 'disabled' : '' ?>"
+          href="<?= ($page > 1) ? url_con_params(['page' => $page - 1]) : '#' ?>">
+          ← Anterior
+        </a>
+
+        <small>Página <?= $page ?> de <?= $total_pages ?></small>
+
+        <a role="button" class="secondary outline <?= ($page >= $total_pages) ? 'disabled' : '' ?>"
+          href="<?= ($page < $total_pages) ? url_con_params(['page' => $page + 1]) : '#' ?>">
+          Siguiente →
+        </a>
+      </div>
+    <?php endif; ?>
+
   </main>
 </body>
 </html>

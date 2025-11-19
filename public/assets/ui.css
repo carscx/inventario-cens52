@@ -1,5 +1,5 @@
 /* public/assets/ui.css */
-/* No forzamos tema: respeta el del sistema/usuario. */
+/* Se respetan las variables de PicoCSS para modo claro/oscuro */
 
 /* ============== Layout base ============== */
 .app-container {
@@ -7,186 +7,222 @@
   margin-inline: auto;
   padding-inline: clamp(0.5rem, 2vw, 1rem);
   padding-block: clamp(0.75rem, 2vw, 2rem);
-  overflow-x: hidden; /* evita overflow en móviles muy estrechos */
+  overflow-x: hidden;
 }
 
+/* Header */
 .page-header {
   display: flex;
   align-items: flex-end;
+  justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  padding-bottom: 1rem;
 }
+
 .page-header h2 {
   margin: 0;
-  line-height: 1.1;
-  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-size: 1.75rem;
+  line-height: 1.2;
 }
 .page-header .header-actions {
-  margin-left: auto;
   display: flex;
   gap: 0.5rem;
 }
 
-/* Botones coherentes (button y a[role="button"]) */
+/* Botones pequeños */
 button,
 a[role="button"] {
-  padding: var(--pico-form-element-spacing-vertical)
-    var(--pico-form-element-spacing-horizontal);
-  line-height: 1.2;
+  padding: 0.4rem 1rem;
+  font-size: 0.9rem;
 }
 
-/* ============== Filtros ============== */
-/* Estructura robusta sin solapes: 1 columna → 2 → 4 áreas */
+/* ============== Filtros (Responsive) ============== */
 .filters {
   display: grid;
-  gap: 0.6rem;
-  align-items: end;
-  margin: 1rem 0 1.25rem;
-  grid-template-columns: 1fr;
-}
-.filters > * {
-  min-width: 0;
-} /* clave para que no rompan la grid */
-.filters input,
-.filters select {
-  width: 100%;
-  text-overflow: ellipsis;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  /* Móvil por defecto: Grilla de 2 columnas */
+  grid-template-columns: 1fr 1fr;
 }
 
-/* acciones: mismos tamaños, sin solaparse */
+/* El buscador ocupa todo el ancho en móvil */
+.filters .search-input {
+  grid-column: span 2;
+}
+
+/* Botones de acción también ocupan todo el ancho o se ajustan al final */
 .filters .actions {
-  display: grid;
-  grid-auto-flow: column;
+  grid-column: span 2;
+  display: flex;
   gap: 0.5rem;
 }
-@media (max-width: 480px) {
+.filters .actions button,
+.filters .actions a {
+  flex: 1; /* Botones anchos en móvil para ser fáciles de tocar */
+}
+
+/* Desktop: Una sola fila */
+@media (min-width: 900px) {
+  .filters {
+    /* Buscador(grande) | Cat | Marca | Estado | Botones */
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  }
+  .filters .search-input {
+    grid-column: auto; /* Resetea el span */
+  }
   .filters .actions {
-    grid-auto-flow: row;
-  }
-  .filters .actions > * {
-    width: 100%;
-  }
-}
-
-/* ≥640px: dos columnas */
-@media (min-width: 640px) {
-  .filters {
-    grid-template-columns: 1fr 1fr;
-    grid-auto-flow: row;
-  }
-  /* el buscador ocupa 2 columnas si le pusiste class="wide" */
-  .filters .wide {
-    grid-column: 1 / -1;
-  }
-}
-
-/* ≥980px: 4 columnas (search + cat + estado + acciones) sin cortar selects */
-@media (min-width: 980px) {
-  .filters {
-    grid-template-columns: 1fr minmax(240px, auto) minmax(220px, auto) auto;
-  }
-  .filters .wide {
     grid-column: auto;
-  } /* vuelve a 1 col en escritorio */
-  .filters .actions {
-    justify-self: end; /* pega los botones a la derecha */
-    grid-auto-flow: column;
+    width: auto;
   }
+  .filters .actions button,
+  .filters .actions a {
+    flex: initial;
+    width: auto;
+  }
+}
+
+/* inputs y selects alineados */
+.filters input,
+.filters select {
+  margin-bottom: 0;
 }
 
 /* ============== Lista de resultados ============== */
 .list-header,
 .list-row {
   display: grid;
-  grid-template-columns: 80px 1.2fr 0.9fr 0.9fr 100px 120px;
-  gap: 0.75rem;
+  grid-template-columns: 70px 1.5fr 1fr 1fr 80px 110px;
+  gap: 1rem;
   align-items: center;
   padding: 0.6rem 0.5rem;
-  border-radius: 0.5rem;
 }
+
 .list-header {
-  font-weight: 600;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding-block: 0.8rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pico-muted-color);
+  border-bottom: 2px solid var(--pico-muted-border-color);
+  margin-bottom: 0.5rem;
 }
+
 .list-row {
+  background: var(--pico-card-background-color);
   border: 1px solid var(--pico-muted-border-color);
-  background: var(--pico-card-background-color, transparent);
-  margin-bottom: 0.6rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  transition: transform 0.1s ease-in-out;
 }
 
-/* ≤980px: tabla “compacta” a 3 columnas */
-@media (max-width: 980px) {
-  .list-header,
-  .list-row {
-    grid-template-columns: 72px 1fr 120px;
-  }
-  .hide-sm {
-    display: none !important;
-  }
-}
-
-/* ≤380px: aún más compacta, sin scroll horizontal */
-@media (max-width: 380px) {
-  .list-header,
-  .list-row {
-    grid-template-columns: 56px 1fr 96px;
-    gap: 0.5rem;
-    padding-inline: 0.4rem;
-  }
-  .thumb {
-    width: 48px;
-    height: 48px;
-  }
-  .item-actions {
-    flex-wrap: wrap;
-    gap: 0.6rem 0.8rem;
-  }
+.list-row:hover {
+  border-color: var(--pico-primary);
+  transform: translateY(-1px);
 }
 
 /* Imagen */
 .thumb {
-  width: 64px;
-  height: 64px;
-  object-fit: cover;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: var(--pico-background-color);
   border-radius: 6px;
-  box-shadow: 0 0 0 1px var(--pico-muted-border-color) inset;
+  border: 1px solid var(--pico-muted-border-color);
+  padding: 2px;
 }
 
-/* Texto y acciones */
+/* Textos */
 .item-main strong {
   display: block;
-  font-weight: 600;
-  margin-bottom: 0.15rem;
+  font-size: 1.05rem;
+  margin-bottom: 0.2rem;
 }
 .meta {
+  font-size: 0.85rem;
   color: var(--pico-muted-color);
-  font-size: 0.92em;
 }
+
 .item-actions {
-  display: inline-flex;
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+}
+.item-actions a {
+  text-decoration: none;
+}
+.item-actions a:hover {
+  text-decoration: underline;
+}
+
+/* Badges de Estado */
+.badge {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 4px;
+  text-transform: uppercase;
+  text-align: center;
+  width: 100%;
+}
+.badge.operativo {
+  background-color: var(--pico-ins-color);
+  color: var(--pico-background-color);
+}
+.badge.en_reparacion {
+  background-color: #f59e0b;
+  color: #fff;
+}
+.badge.baja {
+  background-color: var(--pico-del-color);
+  color: #fff;
+}
+.badge.stock {
+  background-color: var(--pico-primary);
+  color: #fff;
+}
+
+/* Paginación */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 1rem;
-  margin-top: 0.25rem;
+  margin-top: 2rem;
 }
 
-.status {
-  text-transform: capitalize;
-}
+/* Responsive */
+@media (max-width: 900px) {
+  .list-header {
+    display: none;
+  }
 
-/* Avisos y utilidades */
-.notice {
-  border: 1px solid var(--pico-muted-border-color);
-  border-left: 4px solid var(--pico-primary, currentColor);
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  margin: 0.75rem 0 1rem;
-}
-.muted {
-  color: var(--pico-muted-color);
-}
-.nowrap {
-  white-space: nowrap;
+  .list-row {
+    grid-template-columns: 60px 1fr;
+    align-items: start;
+    gap: 0.75rem;
+    position: relative;
+  }
+
+  .hide-sm,
+  .nowrap {
+    display: none;
+  }
+
+  .list-row > div:last-child {
+    display: block;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+  }
+  .badge {
+    width: auto;
+  }
 }
