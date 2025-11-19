@@ -22,6 +22,19 @@
   padding-bottom: 1rem;
 }
 
+@media (max-width: 900px) {
+  .page-header .main-header {
+    border: 2px solid red;
+    align-items: center;
+    justify-content: center;
+  }
+  .page-header .main-header .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 .page-header h2 {
   margin: 0;
   font-size: 1.75rem;
@@ -30,6 +43,8 @@
 .page-header .header-actions {
   display: flex;
   gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 /* Botones pequeños */

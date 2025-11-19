@@ -19,6 +19,7 @@ $marca = $_GET['marca'] ?? '';
 // Config del Header
 $header_title = 'Listado';
 $show_new_button = true;
+$show_login_button = true;
 
 // --- Consulta Base ---
 $sql_base = "

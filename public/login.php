@@ -9,30 +9,35 @@ $error = null;
 // Guarda la URL de retorno (la que venía en ?return_to=...)
 $return_to = $_GET['return_to'] ?? 'index.php';
 
+// Config del Header
+$header_title = '';
+$show_new_button = false;
+$show_login_button = false;
+
 // Si el usuario YA está logueado, lo mandamos a la página de inicio
 if (!empty($_SESSION['auth_ok'])) {
-    header('Location: index.php');
-    exit;
+  header('Location: index.php');
+  exit;
 }
 
 // Lógica de procesamiento del formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pass = $_POST['password'] ?? '';
-    $return_to = $_POST['return_to'] ?? 'index.php';
+  $pass = $_POST['password'] ?? '';
+  $return_to = $_POST['return_to'] ?? 'index.php';
 
-    // Usamos hash_equals() para una comparación segura (anti-ataques de tiempo)
-    if (hash_equals(AUTH_PASSWORD, $pass)) {
-        // ¡Contraseña correcta!
-        session_regenerate_id(true); // Regenera ID de sesión por seguridad
-        $_SESSION['auth_ok'] = true; // Marca al usuario como autenticado
+  // Usamos hash_equals() para una comparación segura (anti-ataques de tiempo)
+  if (hash_equals(AUTH_PASSWORD, $pass)) {
+    // ¡Contraseña correcta!
+    session_regenerate_id(true); // Regenera ID de sesión por seguridad
+    $_SESSION['auth_ok'] = true; // Marca al usuario como autenticado
 
-        // Redirige a la página a la que quería ir (ej. editar.php?id=5)
-        header('Location: ' . $return_to);
-        exit;
-    } else {
-        // Contraseña incorrecta
-        $error = 'Contraseña incorrecta.';
-    }
+    // Redirige a la página a la que quería ir (ej. editar.php?id=5)
+    header('Location: ' . $return_to);
+    exit;
+  } else {
+    // Contraseña incorrecta
+    $error = 'Contraseña incorrecta.';
+  }
 }
 ?>
 <!doctype html>
@@ -46,6 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
   <main class="app-container" style="max-width: 500px; margin-top: 2rem;">
+    <?php require __DIR__ . '/../app/header.php'; ?>
     <h2>Acceso protegido</h2>
     <p>Debes ingresar la contraseña de modificación para continuar.</p>
 

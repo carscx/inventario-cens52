@@ -10,8 +10,6 @@
   </div>
 
   <div class="subheader">
-    <h2>Inventario <span class="muted"><?php echo $header_title ?? 'Listado'; ?></span></h2>
-
     <div class="header-actions">
 
       <!-- Botón Toggle Tema (Sol/Luna) -->
@@ -48,14 +46,16 @@
           <a role="button" class="contrast" href="nuevo.php">+ Nuevo ítem</a>
         <?php endif; ?>
 
-      <?php else: ?>
+      <?php elseif ($show_login_button === true): ?>
         <!-- USUARIO INVITADO: Solo muestra Acceder -->
         <a role="button" class="contrast" href="login.php">Acceder</a>
       <?php endif; ?>
 
     </div>
+
   </div>
 </header>
+<h2>Inventario <span class="muted"><?php echo $header_title ?? 'Listado'; ?></span></h2>
 
 <script>
   (function () {
