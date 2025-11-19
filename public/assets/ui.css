@@ -60,6 +60,7 @@ a[role="button"] {
   grid-column: span 2;
   display: flex;
   gap: 0.5rem;
+  padding-top: 0.9rem;
 }
 .filters .actions button,
 .filters .actions a {

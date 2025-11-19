@@ -131,7 +131,7 @@ function render_badge($estado)
       </select>
 
       <div class="actions">
-        <button type="submit" class="contrast">Filtrar</button>
+        <button type="submit" class="contrast">Buscar</button>
         <?php if ($q || $estado || $categoria || $marca): ?>
           <a role="button" href="index.php" class="secondary outline">Limpiar</a>
         <?php endif; ?>
